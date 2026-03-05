@@ -197,7 +197,7 @@ export default function Home() {
                   >
                     <option value="stable-diffusion-xl">Stable Diffusion XL (HF)</option>
                     <option value="stable-diffusion-2">Stable Diffusion 2.1 (HF)</option>
-                    <option value="z-image-turbo">Z-Image Turbo (FAL-AI) 🚀</option>
+                    <option value="flux-schnell">FLUX Schnell (FAL-AI) 🚀</option>
                     <option value="flux-pro">FLUX Pro (FAL-AI) ✨</option>
                     <option value="flux-realism">FLUX Realism (FAL-AI) 📸</option>
                   </select>

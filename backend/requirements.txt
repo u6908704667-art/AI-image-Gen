@@ -5,3 +5,5 @@ huggingface-hub==0.19.4
 python-dotenv==1.0.0
 pillow==10.1.0
 httpx==0.25.1
+fal-client==0.13.1
+requests==2.31.0

@@ -31,15 +31,15 @@ MODELS = {
     },
     
     # FAL-AI Models
-    "z-image-turbo": {
-        "id": "z-image-turbo",
-        "name": "Z-Image Turbo (FAL-AI)",
+    "flux-schnell": {
+        "id": "flux-schnell",
+        "name": "FLUX Schnell (FAL-AI)",
         "provider": "fal_ai",
-        "model_id": "Tongyi-MAI/Z-Image-Turbo",
-        "description": "Ultra-fast image generation (real-time inference)",
+        "model_id": "fal-ai/flux-schnell",
+        "description": "Ultra-fast open-source model with excellent quality",
         "speed": "Ultra-Fast",
         "quality": "High",
-        "features": ["text-to-image", "real-time"],
+        "features": ["text-to-image", "real-time", "open-source"],
         "best_for": "Quick iterations, real-time generation"
     },
     

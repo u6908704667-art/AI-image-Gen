@@ -3,6 +3,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import httpx
+import requests
 from pydantic import BaseModel
 import base64
 from io import BytesIO
@@ -27,6 +28,10 @@ app.add_middleware(
 # Get API tokens for different providers
 HF_TOKEN = os.getenv("HUGGINGFACE_API_TOKEN")
 FAL_TOKEN = os.getenv("FAL_API_KEY")
+
+# Set FAL-AI environment variable for fal-client
+if FAL_TOKEN:
+    os.environ["FAL_KEY"] = FAL_TOKEN
 
 # Default model
 DEFAULT_MODEL = "stable-diffusion-xl"
@@ -134,28 +139,59 @@ async def generate_hugging_face(model_config: dict, prompt: str):
 
 async def generate_fal_ai(model_config: dict, prompt: str):
     """Generate image using FAL-AI API"""
-    from huggingface_hub import InferenceClient
+    import fal_client
     from io import BytesIO
     from PIL import Image
+    import requests
+    
+    print(f"[DEBUG] FAL-AI Generation Start")
+    print(f"[DEBUG] Model Config: {model_config}")
+    print(f"[DEBUG] Prompt: {prompt[:50]}...")
+    print(f"[DEBUG] FAL Token: {FAL_TOKEN[:20]}...")
     
     try:
-        # Initialize FAL-AI client
-        client = InferenceClient(
-            provider="fal-ai",
-            api_key=FAL_TOKEN,
-        )
+        # FAL-AI client is initialized with FAL_KEY environment variable
+        print(f"[DEBUG] FAL API key configured from environment")
         
-        # Generate image
-        image = client.text_to_image(
-            prompt,
-            model=model_config.get("model_id"),
-        )
+        # Map our model names to FAL handler URLs
+        # FAL models are registered under their owner/model format
+        model_handlers = {
+            "flux-schnell": "black-forest-labs/flux-schnell",
+            "flux-pro": "black-forest-labs/flux-pro",
+            "flux-realism": "black-forest-labs/flux-realism"
+        }
         
-        # Convert PIL Image to base64
-        img_buffer = BytesIO()
-        image.save(img_buffer, format="PNG")
-        img_buffer.seek(0)
-        img_base64 = base64.b64encode(img_buffer.getvalue()).decode("utf-8")
+        handler_url = model_handlers.get(model_config.get("id"))
+        if not handler_url:
+            handler_url = f"fal-ai/{model_config.get('model_id')}"
+        
+        print(f"[DEBUG] Handler URL: {handler_url}")
+        
+        # Generate image using FAL
+        print(f"[DEBUG] Submitting request to FAL...")
+        result = fal_client.submit(
+            handler_url,
+            arguments={"prompt": prompt}
+        ).get()
+        
+        print(f"[DEBUG] FAL Response: {result}")
+        
+        # Get the image URL from result
+        image_url = result.get("image", {}).get("url") or result.get("images", [{}])[0].get("url")
+        
+        if not image_url:
+            raise ValueError(f"No image URL in FAL-AI response: {result}")
+        
+        print(f"[DEBUG] Image URL: {image_url}")
+        
+        # Download the image
+        img_response = requests.get(image_url)
+        img_response.raise_for_status()
+        
+        print(f"[DEBUG] Image downloaded, size: {len(img_response.content)}")
+        
+        # Convert to base64
+        img_base64 = base64.b64encode(img_response.content).decode("utf-8")
         
         return JSONResponse(
             content={
@@ -165,6 +201,9 @@ async def generate_fal_ai(model_config: dict, prompt: str):
             }
         )
     except Exception as e:
+        print(f"[ERROR] FAL-AI generation failed: {str(e)}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(
             status_code=500,
             detail=f"FAL-AI generation failed: {str(e)}"
