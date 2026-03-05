@@ -1,17 +1,26 @@
 'use client';
 import { useState } from 'react';
+import { Sparkles, Upload, Zap } from 'lucide-react';
 
 export default function Home() {
   const [prompt, setPrompt] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [generatedImage, setGeneratedImage] = useState('');
   const [loading, setLoading] = useState(false);
+  const [fileName, setFileName] = useState('');
+
+  const handleGenerateClick = async () => {
+    if (!prompt.trim()) {
+      alert('Please enter a prompt to generate an image');
+      return;
+    }
+    await handleGenerate();
+  };
 
   const handleGenerate = async () => {
     setLoading(true);
     let imageUrl = '';
     if (imageFile) {
-      // Upload image to Vercel Blob for URL (or use a temp URL service)
       const formData = new FormData();
       formData.append('file', imageFile);
       const uploadRes = await fetch('http://localhost:8002/api/upload', { method: 'POST', body: formData });
@@ -44,25 +53,184 @@ export default function Home() {
   };
 
   return (
-    <div className="p-8">
-      <h1 className="text-2xl mb-4">AI Image Generator</h1>
-      <input
-        type="text"
-        value={prompt}
-        onChange={(e) => setPrompt(e.target.value)}
-        placeholder="Enter prompt"
-        className="border p-2 mb-4 w-full"
-      />
-      <input
-        type="file"
-        accept="image/*"
-        onChange={(e) => setImageFile(e.target.files?.[0] || null)}
-        className="mb-4"
-      />
-      <button onClick={handleGenerate} disabled={loading} className="bg-blue-500 text-white p-2">
-        {loading ? 'Generating...' : 'Generate Image'}
-      </button>
-      {generatedImage && <img src={generatedImage} alt="Generated" className="mt-4" />}
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+      {/* Header */}
+      <header className="border-b border-cyan-900/30 backdrop-blur-md sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-6 py-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-400 to-green-400 flex items-center justify-center">
+                <Sparkles className="w-6 h-6 text-slate-950" />
+              </div>
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-cyan-400 via-green-400 to-cyan-400 bg-clip-text text-transparent">
+                Neural Synthesis AI
+              </h1>
+            </div>
+            <div className="text-sm text-cyan-400/70">v1.0</div>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Container */}
+      <main className="max-w-7xl mx-auto px-6 py-12">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Left Panel - Controls */}
+          <div className="space-y-6">
+            {/* Title */}
+            <div className="space-y-2">
+              <h2 className="text-4xl font-bold text-white">Create AI Art</h2>
+              <p className="text-cyan-400/70">Generate stunning visuals with advanced neural networks</p>
+            </div>
+
+            {/* Input Section */}
+            <div className="space-y-4">
+              {/* Prompt Input */}
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-cyan-400 uppercase tracking-wider">
+                  Scene Description
+                </label>
+                <textarea
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  placeholder="Describe your anime scene... (e.g., 'A cyberpunk city at night with glowing neon lights, detailed architecture, cinematic lighting')"
+                  rows={6}
+                  className="w-full px-4 py-3 bg-slate-900/50 border border-cyan-500/30 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 transition-all resize-none"
+                />
+              </div>
+
+              {/* File Upload */}
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-cyan-400 uppercase tracking-wider">
+                  Reference Image (Optional)
+                </label>
+                <div className="relative">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      setImageFile(e.target.files?.[0] || null);
+                      setFileName(e.target.files?.[0]?.name || '');
+                    }}
+                    className="hidden"
+                    id="file-upload"
+                  />
+                  <label
+                    htmlFor="file-upload"
+                    className="flex items-center justify-center gap-2 px-4 py-3 bg-slate-900/50 border-2 border-dashed border-cyan-500/30 rounded-lg cursor-pointer hover:border-cyan-400 hover:bg-slate-900/70 transition-all group"
+                  >
+                    <Upload className="w-5 h-5 text-cyan-400 group-hover:text-cyan-300" />
+                    <span className="text-slate-300 group-hover:text-white transition-colors">
+                      {fileName || 'Upload Image for Style Transfer'}
+                    </span>
+                  </label>
+                </div>
+                {fileName && (
+                  <button
+                    onClick={() => {
+                      setImageFile(null);
+                      setFileName('');
+                    }}
+                    className="text-xs text-red-400 hover:text-red-300"
+                  >
+                    Remove file
+                  </button>
+                )}
+              </div>
+
+              {/* Generate Button */}
+              <button
+                onClick={handleGenerateClick}
+                disabled={loading}
+                className={`w-full py-4 px-6 rounded-lg font-bold uppercase tracking-wider text-lg transition-all flex items-center justify-center gap-2 ${
+                  loading
+                    ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-cyan-400 to-green-400 text-slate-950 hover:from-cyan-300 hover:to-green-300 hover:shadow-lg hover:shadow-cyan-400/50 active:scale-95'
+                }`}
+              >
+                <Zap className="w-5 h-5" />
+                {loading ? 'Generating...' : 'Generate Frame'}
+              </button>
+
+              {/* Info */}
+              <div className="bg-cyan-900/20 border border-cyan-500/30 rounded-lg p-4">
+                <p className="text-cyan-400 text-sm">
+                  💡 <span className="font-semibold">Tip:</span> Be descriptive with your scene details. Include lighting, style, composition, and mood for best results.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Panel - Preview */}
+          <div className="space-y-6">
+            {/* Preview Section */}
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold text-cyan-400 uppercase tracking-wider">
+                Live Preview
+              </h3>
+              <div className="aspect-square bg-gradient-to-br from-slate-800 to-slate-900 border border-cyan-500/30 rounded-lg overflow-hidden flex items-center justify-center relative">
+                {generatedImage ? (
+                  <div className="relative w-full h-full">
+                    <img
+                      src={generatedImage}
+                      alt="Generated"
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/50 to-transparent pointer-events-none" />
+                  </div>
+                ) : (
+                  <div className="text-center space-y-4">
+                    <div className="w-16 h-16 mx-auto rounded-lg bg-gradient-to-br from-cyan-400/20 to-green-400/20 flex items-center justify-center">
+                      <Sparkles className="w-8 h-8 text-cyan-400" />
+                    </div>
+                    <div>
+                      <p className="text-slate-400 text-sm">Awaiting Neural Input</p>
+                      <p className="text-slate-600 text-xs mt-1">Describe your scene and click Generate</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Download Button */}
+            {generatedImage && (
+              <a
+                href={generatedImage}
+                download="generated-image.png"
+                className="w-full py-3 px-6 rounded-lg bg-slate-800 border border-cyan-500/30 text-cyan-400 font-semibold hover:border-cyan-400 hover:text-cyan-300 hover:bg-slate-700/50 transition-all text-center"
+              >
+                ⬇️ Download Image
+              </a>
+            )}
+
+            {/* Stats */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-slate-900/50 border border-cyan-500/20 rounded-lg p-4">
+                <div className="text-2xl font-bold text-cyan-400">Neural</div>
+                <div className="text-xs text-slate-500 mt-1">AI Engine</div>
+              </div>
+              <div className="bg-slate-900/50 border border-cyan-500/20 rounded-lg p-4">
+                <div className="text-2xl font-bold text-green-400">Synthesis</div>
+                <div className="text-xs text-slate-500 mt-1">Real-time</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="border-t border-cyan-900/30 mt-16">
+        <div className="max-w-7xl mx-auto px-6 py-8">
+          <div className="flex items-center justify-between">
+            <p className="text-slate-500 text-sm">
+              Powered by Stable Diffusion XL • © 2026 Neural Synthesis
+            </p>
+            <div className="flex gap-2">
+              <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+              <span className="text-xs text-cyan-400">System Online</span>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
