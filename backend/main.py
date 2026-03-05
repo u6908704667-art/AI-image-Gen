@@ -2,7 +2,7 @@ import os
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from huggingface_hub import InferenceClient
+import httpx
 from pydantic import BaseModel
 import base64
 from io import BytesIO
@@ -24,7 +24,7 @@ app.add_middleware(
 
 # Initialize Hugging Face client
 HF_TOKEN = os.getenv("HUGGINGFACE_API_TOKEN")
-client = InferenceClient(token=HF_TOKEN)
+# Using httpx for direct API calls to the new Hugging Face router
 
 # Models
 TEXT_MODEL = os.getenv("NEXT_PUBLIC_MODEL_TEXT", "stabilityai/stable-diffusion-xl-base-1.0")
@@ -44,31 +44,34 @@ async def generate_image(request: GenerateRequest):
         if not HF_TOKEN:
             raise HTTPException(status_code=500, detail="API token not configured")
 
-        if request.mode == "img" and request.imageUrl:
-            # Image-to-image generation
-            model = IMG_MODEL
-            # For img2img, we need the actual image; using prompt with image URL
-            image = client.text_to_image(
-                prompt=request.prompt,
-                model=model,
-            )
-        else:
-            # Text-to-image generation
-            model = TEXT_MODEL
-            image = client.text_to_image(
-                prompt=request.prompt,
-                model=model,
+        model = IMG_MODEL if request.mode == "img" and request.imageUrl else TEXT_MODEL
+
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"https://router.huggingface.co/hf-inference/models/{model}",
+                headers={
+                    "Authorization": f"Bearer {HF_TOKEN}",
+                    "Content-Type": "application/json",
+                },
+                json={"inputs": request.prompt},
+                timeout=60.0
             )
 
-        # Convert PIL Image to base64
-        img_buffer = BytesIO()
-        image.save(img_buffer, format="PNG")
-        img_buffer.seek(0)
-        img_base64 = base64.b64encode(img_buffer.getvalue()).decode("utf-8")
+            if response.status_code != 200:
+                raise HTTPException(
+                    status_code=response.status_code,
+                    detail=f"API request failed: {response.text}"
+                )
 
-        return JSONResponse(
-            content={"image": f"data:image/png;base64,{img_base64}"}
-        )
+            # The response should be binary image data
+            image_data = response.content
+
+            # Convert to base64
+            img_base64 = base64.b64encode(image_data).decode("utf-8")
+
+            return JSONResponse(
+                content={"image": f"data:image/png;base64,{img_base64}"}
+            )
 
     except Exception as e:
         raise HTTPException(
@@ -97,4 +100,4 @@ async def health_check():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8002)
