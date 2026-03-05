@@ -63,7 +63,7 @@ export default function Home() {
                 <Sparkles className="w-6 h-6 text-slate-950" />
               </div>
               <h1 className="text-2xl font-bold bg-gradient-to-r from-cyan-400 via-green-400 to-cyan-400 bg-clip-text text-transparent">
-                Neural Synthesis AI
+                NovaZone XI
               </h1>
             </div>
             <div className="text-sm text-cyan-400/70">v1.0</div>
@@ -78,8 +78,8 @@ export default function Home() {
           <div className="space-y-6">
             {/* Title */}
             <div className="space-y-2">
-              <h2 className="text-4xl font-bold text-white">Create AI Art</h2>
-              <p className="text-cyan-400/70">Generate stunning visuals with advanced neural networks</p>
+              <h2 className="text-4xl font-bold text-white">Create Anime Masterpieces</h2>
+              <p className="text-cyan-400/70">Generate stunning anime art with cutting-edge AI technology</p>
             </div>
 
             {/* Input Section */}
@@ -183,8 +183,8 @@ export default function Home() {
                       <Sparkles className="w-8 h-8 text-cyan-400" />
                     </div>
                     <div>
-                      <p className="text-slate-400 text-sm">Awaiting Neural Input</p>
-                      <p className="text-slate-600 text-xs mt-1">Describe your scene and click Generate</p>
+                      <p className="text-slate-400 text-sm">NovaZone Ready</p>
+                      <p className="text-slate-600 text-xs mt-1">Enter your description and click Generate</p>
                     </div>
                   </div>
                 )}
@@ -205,11 +205,11 @@ export default function Home() {
             {/* Stats */}
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-slate-900/50 border border-cyan-500/20 rounded-lg p-4">
-                <div className="text-2xl font-bold text-cyan-400">Neural</div>
+                <div className="text-2xl font-bold text-cyan-400">NovaZone</div>
                 <div className="text-xs text-slate-500 mt-1">AI Engine</div>
               </div>
               <div className="bg-slate-900/50 border border-cyan-500/20 rounded-lg p-4">
-                <div className="text-2xl font-bold text-green-400">Synthesis</div>
+                <div className="text-2xl font-bold text-green-400">XI</div>
                 <div className="text-xs text-slate-500 mt-1">Real-time</div>
               </div>
             </div>
@@ -222,7 +222,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-6 py-8">
           <div className="flex items-center justify-between">
             <p className="text-slate-500 text-sm">
-              Powered by Stable Diffusion XL • © 2026 Neural Synthesis
+              Powered by Stable Diffusion XL • © 2026 NovaZone XI Merchandise
             </p>
             <div className="flex gap-2">
               <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />

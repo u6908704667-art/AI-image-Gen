@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'AI Image Generator',
-  description: 'Generate images using AI with Hugging Face',
+  title: 'NovaZone XI - AI Anime Art Generator',
+  description: 'Generate stunning anime masterpieces with cutting-edge AI technology powered by Stable Diffusion XL',
 };
 
 export default function RootLayout({
