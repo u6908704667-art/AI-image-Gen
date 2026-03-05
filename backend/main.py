@@ -8,6 +8,7 @@ import base64
 from io import BytesIO
 from dotenv import load_dotenv
 from prompts import build_character_prompt, build_style_prompt
+from models import get_model_by_id, validate_model, get_all_models
 
 # Load environment variables
 load_dotenv()
@@ -23,13 +24,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize Hugging Face client
+# Get API tokens for different providers
 HF_TOKEN = os.getenv("HUGGINGFACE_API_TOKEN")
-# Using httpx for direct API calls to the new Hugging Face router
+FAL_TOKEN = os.getenv("FAL_API_KEY")
 
-# Models
-TEXT_MODEL = os.getenv("NEXT_PUBLIC_MODEL_TEXT", "stabilityai/stable-diffusion-xl-base-1.0")
-IMG_MODEL = os.getenv("NEXT_PUBLIC_MODEL_IMG", "stabilityai/stable-diffusion-2-1")
+# Default model
+DEFAULT_MODEL = "stable-diffusion-xl"
 
 
 class GenerateRequest(BaseModel):
@@ -40,16 +40,27 @@ class GenerateRequest(BaseModel):
     style: str = "seinen"  # Visual style (seinen, cyberpunk, noir, cyberpunk_noir)
     strict_mode: bool = False  # Apply strict character constraints
     use_constraints: bool = True  # Apply style and character constraints
+    model: str = None  # Model ID to use (defaults to stable-diffusion-xl)
 
 
 @app.post("/api/generate")
 async def generate_image(request: GenerateRequest):
-    """Generate image using Hugging Face Inference API with optional constraints"""
+    """Generate image using selected AI model with optional constraints"""
     try:
-        if not HF_TOKEN:
-            raise HTTPException(status_code=500, detail="API token not configured")
-
-        model = IMG_MODEL if request.mode == "img" and request.imageUrl else TEXT_MODEL
+        # Determine which model to use
+        model_id = request.model or DEFAULT_MODEL
+        
+        if not validate_model(model_id):
+            raise HTTPException(status_code=400, detail=f"Invalid model: {model_id}")
+        
+        model_config = get_model_by_id(model_id)
+        provider = model_config.get("provider")
+        
+        # Check for required tokens
+        if provider == "hugging_face" and not HF_TOKEN:
+            raise HTTPException(status_code=500, detail="Hugging Face API token not configured")
+        if provider == "fal_ai" and not FAL_TOKEN:
+            raise HTTPException(status_code=500, detail="FAL-AI API token not configured (set FAL_API_KEY)")
 
         # Build the final prompt with constraints
         if request.use_constraints:
@@ -70,41 +81,114 @@ async def generate_image(request: GenerateRequest):
             # No constraints, use prompt as-is
             final_prompt = request.prompt
 
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                f"https://router.huggingface.co/hf-inference/models/{model}",
-                headers={
-                    "Authorization": f"Bearer {HF_TOKEN}",
-                    "Content-Type": "application/json",
-                },
-                json={"inputs": final_prompt},
-                timeout=60.0
-            )
+        # Route to appropriate provider
+        if provider == "hugging_face":
+            return await generate_hugging_face(model_config, final_prompt)
+        elif provider == "fal_ai":
+            return await generate_fal_ai(model_config, final_prompt)
+        else:
+            raise HTTPException(status_code=500, detail=f"Unknown provider: {provider}")
 
-            if response.status_code != 200:
-                raise HTTPException(
-                    status_code=response.status_code,
-                    detail=f"API request failed: {response.text}"
-                )
-
-            # The response should be binary image data
-            image_data = response.content
-
-            # Convert to base64
-            img_base64 = base64.b64encode(image_data).decode("utf-8")
-
-            return JSONResponse(
-                content={
-                    "image": f"data:image/png;base64,{img_base64}",
-                    "prompt_used": final_prompt if not request.use_constraints else "[Constraints Applied]"
-                }
-            )
-
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=500,
             detail=f"Generation failed: {str(e)}"
         )
+
+
+async def generate_hugging_face(model_config: dict, prompt: str):
+    """Generate image using Hugging Face API"""
+    model_id = model_config.get("model_id")
+    
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            f"https://router.huggingface.co/hf-inference/models/{model_id}",
+            headers={
+                "Authorization": f"Bearer {HF_TOKEN}",
+                "Content-Type": "application/json",
+            },
+            json={"inputs": prompt},
+            timeout=60.0
+        )
+
+        if response.status_code != 200:
+            raise HTTPException(
+                status_code=response.status_code,
+                detail=f"API request failed: {response.text}"
+            )
+
+        # The response should be binary image data
+        image_data = response.content
+        img_base64 = base64.b64encode(image_data).decode("utf-8")
+
+        return JSONResponse(
+            content={
+                "image": f"data:image/png;base64,{img_base64}",
+                "model_used": model_config.get("name"),
+                "provider": "hugging_face"
+            }
+        )
+
+
+async def generate_fal_ai(model_config: dict, prompt: str):
+    """Generate image using FAL-AI API"""
+    from huggingface_hub import InferenceClient
+    from io import BytesIO
+    from PIL import Image
+    
+    try:
+        # Initialize FAL-AI client
+        client = InferenceClient(
+            provider="fal-ai",
+            api_key=FAL_TOKEN,
+        )
+        
+        # Generate image
+        image = client.text_to_image(
+            prompt,
+            model=model_config.get("model_id"),
+        )
+        
+        # Convert PIL Image to base64
+        img_buffer = BytesIO()
+        image.save(img_buffer, format="PNG")
+        img_buffer.seek(0)
+        img_base64 = base64.b64encode(img_buffer.getvalue()).decode("utf-8")
+        
+        return JSONResponse(
+            content={
+                "image": f"data:image/png;base64,{img_base64}",
+                "model_used": model_config.get("name"),
+                "provider": "fal_ai"
+            }
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"FAL-AI generation failed: {str(e)}"
+        )
+
+
+@app.get("/api/models")
+async def list_models():
+    """Get all available models and their configurations"""
+    return JSONResponse(
+        content={
+            "models": get_all_models(),
+            "default_model": DEFAULT_MODEL
+        }
+    )
+
+
+@app.get("/api/models/{model_id}")
+async def get_model_details(model_id: str):
+    """Get detailed information about a specific model"""
+    model = get_model_by_id(model_id)
+    if not model:
+        raise HTTPException(status_code=404, detail=f"Model not found: {model_id}")
+    return JSONResponse(content=model)
 
 
 @app.post("/api/upload")

@@ -1,6 +1,6 @@
 'use client';
-import { useState } from 'react';
-import { Sparkles, Upload, Zap, Lock, Palette } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Sparkles, Upload, Zap, Lock, Palette, Cpu } from 'lucide-react';
 
 export default function Home() {
   const [prompt, setPrompt] = useState('');
@@ -12,6 +12,29 @@ export default function Home() {
   const [style, setStyle] = useState('seinen');
   const [strictMode, setStrictMode] = useState(false);
   const [useConstraints, setUseConstraints] = useState(true);
+  const [selectedModel, setSelectedModel] = useState('stable-diffusion-xl');
+  const [availableModels, setAvailableModels] = useState<any[]>([]);
+  const [modelInfo, setModelInfo] = useState<any>(null);
+
+  // Fetch available models on component mount
+  useEffect(() => {
+    const fetchModels = async () => {
+      try {
+        const res = await fetch('http://localhost:8002/api/models');
+        const data = await res.json();
+        setAvailableModels(data.models || []);
+      } catch (error) {
+        console.error('Failed to fetch models:', error);
+      }
+    };
+    fetchModels();
+  }, []);
+
+  // Update model info when selected model changes
+  useEffect(() => {
+    const model = availableModels.find(m => m.id === selectedModel);
+    setModelInfo(model);
+  }, [selectedModel, availableModels]);
 
   const handleGenerateClick = async () => {
     if (!prompt.trim()) {
@@ -43,7 +66,8 @@ export default function Home() {
           character: characterName || null,
           style,
           strict_mode: strictMode,
-          use_constraints: useConstraints
+          use_constraints: useConstraints,
+          model: selectedModel
         }),
       });
 
@@ -160,6 +184,48 @@ export default function Home() {
                     <option value="cyberpunk_noir">Cyberpunk Noir (Fusion)</option>
                   </select>
                 </div>
+
+                {/* Model Selector */}
+                <div className="space-y-2">
+                  <label className="block text-xs font-semibold text-cyan-400 uppercase tracking-wider flex items-center gap-1">
+                    <Cpu className="w-4 h-4" /> AI Model
+                  </label>
+                  <select
+                    value={selectedModel}
+                    onChange={(e) => setSelectedModel(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-900/50 border border-cyan-500/30 rounded-lg text-white text-sm focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/20 transition-all"
+                  >
+                    <option value="stable-diffusion-xl">Stable Diffusion XL (HF)</option>
+                    <option value="stable-diffusion-2">Stable Diffusion 2.1 (HF)</option>
+                    <option value="z-image-turbo">Z-Image Turbo (FAL-AI) 🚀</option>
+                    <option value="flux-pro">FLUX Pro (FAL-AI) ✨</option>
+                    <option value="flux-realism">FLUX Realism (FAL-AI) 📸</option>
+                  </select>
+                </div>
+
+                {/* Model Info Card */}
+                {modelInfo && (
+                  <div className="bg-slate-900/50 border border-cyan-500/30 rounded-lg p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold text-cyan-400 text-sm">{modelInfo.name}</h3>
+                      <span className="text-xs px-2 py-1 rounded-full bg-cyan-500/20 text-cyan-300">{modelInfo.provider}</span>
+                    </div>
+                    <p className="text-xs text-slate-400">{modelInfo.description}</p>
+                    <div className="flex gap-4 text-xs">
+                      <span className="text-green-400"><strong>Speed:</strong> {modelInfo.speed}</span>
+                      <span className="text-yellow-400"><strong>Quality:</strong> {modelInfo.quality}</span>
+                    </div>
+                    {modelInfo.features && (
+                      <div className="flex flex-wrap gap-1">
+                        {modelInfo.features.map((feature, i) => (
+                          <span key={i} className="text-xs px-2 py-1 bg-green-900/30 text-green-300 rounded">
+                            {feature}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Strict Mode Toggle (Only for Character) */}
