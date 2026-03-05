@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { Sparkles, Upload, Zap } from 'lucide-react';
+import { Sparkles, Upload, Zap, Lock, Palette } from 'lucide-react';
 
 export default function Home() {
   const [prompt, setPrompt] = useState('');
@@ -8,6 +8,10 @@ export default function Home() {
   const [generatedImage, setGeneratedImage] = useState('');
   const [loading, setLoading] = useState(false);
   const [fileName, setFileName] = useState('');
+  const [characterName, setCharacterName] = useState('');
+  const [style, setStyle] = useState('seinen');
+  const [strictMode, setStrictMode] = useState(false);
+  const [useConstraints, setUseConstraints] = useState(true);
 
   const handleGenerateClick = async () => {
     if (!prompt.trim()) {
@@ -32,7 +36,15 @@ export default function Home() {
       const res = await fetch('http://localhost:8002/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, imageUrl, mode: imageFile ? 'img' : 'text' }),
+        body: JSON.stringify({
+          prompt,
+          imageUrl,
+          mode: imageFile ? 'img' : 'text',
+          character: characterName || null,
+          style,
+          strict_mode: strictMode,
+          use_constraints: useConstraints
+        }),
       });
 
       if (!res.ok) {
@@ -84,6 +96,97 @@ export default function Home() {
 
             {/* Input Section */}
             <div className="space-y-4">
+              {/* Constraints Header */}
+              {useConstraints && (
+                <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-4 flex items-start gap-3">
+                  <Lock className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-green-400 text-sm font-semibold">Constraints Active</p>
+                    <p className="text-green-400/70 text-xs mt-1">
+                      {characterName ? `Character Lock: ${characterName} (${strictMode ? 'STRICT' : 'Relaxed'})` : `Style Lock: ${style}`}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Constraint Controls */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {/* Enable Constraints Toggle */}
+                <div className="space-y-2">
+                  <label className="block text-xs font-semibold text-cyan-400 uppercase tracking-wider">
+                    Enable Constraints
+                  </label>
+                  <button
+                    onClick={() => setUseConstraints(!useConstraints)}
+                    className={`w-full py-2 px-3 rounded-lg font-semibold transition-all text-sm ${
+                      useConstraints
+                        ? 'bg-green-500/20 border border-green-500 text-green-400'
+                        : 'bg-slate-900/50 border border-slate-700 text-slate-400'
+                    }`}
+                  >
+                    {useConstraints ? '✓ Enabled' : 'Disabled'}
+                  </button>
+                </div>
+
+                {/* Character Name Input */}
+                <div className="space-y-2">
+                  <label className="block text-xs font-semibold text-cyan-400 uppercase tracking-wider">
+                    Character Name
+                  </label>
+                  <input
+                    type="text"
+                    value={characterName}
+                    onChange={(e) => setCharacterName(e.target.value)}
+                    placeholder="e.g., Bulma, Motoko"
+                    disabled={!useConstraints}
+                    className="w-full px-3 py-2 bg-slate-900/50 border border-cyan-500/30 rounded-lg text-white placeholder-slate-500 text-sm focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  />
+                </div>
+
+                {/* Style Selector */}
+                <div className="space-y-2">
+                  <label className="block text-xs font-semibold text-cyan-400 uppercase tracking-wider flex items-center gap-1">
+                    <Palette className="w-4 h-4" /> Style
+                  </label>
+                  <select
+                    value={style}
+                    onChange={(e) => setStyle(e.target.value)}
+                    disabled={!useConstraints || !!characterName}
+                    className="w-full px-3 py-2 bg-slate-900/50 border border-cyan-500/30 rounded-lg text-white text-sm focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <option value="seinen">Seinen (1990s Cyberpunk)</option>
+                    <option value="cyberpunk">Cyberpunk (Neon)</option>
+                    <option value="noir">Noir (Dark & Moody)</option>
+                    <option value="cyberpunk_noir">Cyberpunk Noir (Fusion)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Strict Mode Toggle (Only for Character) */}
+              {characterName && useConstraints && (
+                <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-4">
+                  <button
+                    onClick={() => setStrictMode(!strictMode)}
+                    className="w-full flex items-center justify-between p-3 hover:bg-red-900/30 transition-all"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Lock className="w-5 h-5 text-red-400" />
+                      <div className="text-left">
+                        <p className="font-semibold text-red-400">Strict Mode</p>
+                        <p className="text-xs text-red-400/70">No deviations from character specs</p>
+                      </div>
+                    </div>
+                    <div className={`px-3 py-1 rounded-full font-bold text-sm ${
+                      strictMode
+                        ? 'bg-red-500 text-white'
+                        : 'bg-slate-700 text-slate-300'
+                    }`}>
+                      {strictMode ? 'ON' : 'OFF'}
+                    </div>
+                  </button>
+                </div>
+              )}
+
               {/* Prompt Input */}
               <div className="space-y-2">
                 <label className="block text-sm font-semibold text-cyan-400 uppercase tracking-wider">
