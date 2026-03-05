@@ -14,12 +14,12 @@ export default function Home() {
       // Upload image to Vercel Blob for URL (or use a temp URL service)
       const formData = new FormData();
       formData.append('file', imageFile);
-      const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData });
+      const uploadRes = await fetch('http://localhost:8000/api/upload', { method: 'POST', body: formData });
       const { url } = await uploadRes.json();
       imageUrl = url;
     }
 
-    const res = await fetch('/api/generate', {
+    const res = await fetch('http://localhost:8000/api/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt, imageUrl, mode: imageFile ? 'img' : 'text' }),
