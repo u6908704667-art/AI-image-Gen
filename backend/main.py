@@ -24,7 +24,7 @@ app.add_middleware(
 
 # Initialize Hugging Face client
 HF_TOKEN = os.getenv("HUGGINGFACE_API_TOKEN")
-client = InferenceClient(api_key=HF_TOKEN)
+client = InferenceClient(token=HF_TOKEN)
 
 # Models
 TEXT_MODEL = os.getenv("NEXT_PUBLIC_MODEL_TEXT", "stabilityai/stable-diffusion-xl-base-1.0")
