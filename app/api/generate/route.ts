@@ -1,28 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
-import axios from 'axios';
 
 export async function POST(req: NextRequest) {
-  const { prompt, imageUrl, mode } = await req.json();  // mode: 'text' or 'img'
-  const model = mode === 'img' ? process.env.NEXT_PUBLIC_MODEL_IMG : process.env.NEXT_PUBLIC_MODEL_TEXT;
-  const token = process.env.HUGGINGFACE_API_TOKEN;
+  const body = await req.json();
 
   try {
-    const inputs = mode === 'img' ? { prompt, image: imageUrl } : { prompt };
-    const response = await axios.post(
-      `https://api-inference.huggingface.co/models/${model}`,
-      inputs,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        responseType: 'arraybuffer',  // For binary image data
-      }
-    );
+    // Forward request to FastAPI backend
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
+    const response = await fetch(`${backendUrl}/api/generate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
 
-    const base64Image = Buffer.from(response.data, 'binary').toString('base64');
-    return NextResponse.json({ image: `data:image/png;base64,${base64Image}` });
+    if (!response.ok) {
+      throw new Error(`Backend error: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return NextResponse.json(data);
   } catch (error) {
-    return NextResponse.json({ error: 'Generation failed' }, { status: 500 });
+    console.error('Generation error:', error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Generation failed' },
+      { status: 500 }
+    );
   }
 }

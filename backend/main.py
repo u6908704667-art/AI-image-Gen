@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import httpx
 import requests
 from pydantic import BaseModel
+from typing import Optional
 import base64
 from io import BytesIO
 from dotenv import load_dotenv
@@ -17,9 +18,17 @@ load_dotenv()
 app = FastAPI()
 
 # Enable CORS for Next.js frontend
+frontend_urls = [
+    "http://localhost:3000",
+    "http://localhost:3001",
+    os.getenv("FRONTEND_URL", "").strip(),  # Production URL from env
+]
+# Remove empty strings
+frontend_urls = [url for url in frontend_urls if url]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:3001"],
+    allow_origins=frontend_urls,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -28,10 +37,18 @@ app.add_middleware(
 # Get API tokens for different providers
 HF_TOKEN = os.getenv("HUGGINGFACE_API_TOKEN")
 FAL_TOKEN = os.getenv("FAL_API_KEY")
+BYTEZ_KEY = os.getenv("BYTEZ_KEY")
 
 # Set FAL-AI environment variable for fal-client
 if FAL_TOKEN:
     os.environ["FAL_KEY"] = FAL_TOKEN
+
+# Import Bytez if available
+try:
+    from bytez import Bytez
+    BYTEZ_AVAILABLE = True
+except ImportError:
+    BYTEZ_AVAILABLE = False
 
 # Default model
 DEFAULT_MODEL = "stable-diffusion-xl"
@@ -39,13 +56,13 @@ DEFAULT_MODEL = "stable-diffusion-xl"
 
 class GenerateRequest(BaseModel):
     prompt: str
-    imageUrl: str = None
+    imageUrl: Optional[str] = None
     mode: str = "text"  # 'text' or 'img'
-    character: str = None  # Character name for strict mode
+    character: Optional[str] = None  # Character name for strict mode
     style: str = "seinen"  # Visual style (seinen, cyberpunk, noir, cyberpunk_noir)
     strict_mode: bool = False  # Apply strict character constraints
     use_constraints: bool = True  # Apply style and character constraints
-    model: str = None  # Model ID to use (defaults to stable-diffusion-xl)
+    model: Optional[str] = None  # Model ID to use (defaults to stable-diffusion-xl)
 
 
 @app.post("/api/generate")
@@ -66,6 +83,10 @@ async def generate_image(request: GenerateRequest):
             raise HTTPException(status_code=500, detail="Hugging Face API token not configured")
         if provider == "fal_ai" and not FAL_TOKEN:
             raise HTTPException(status_code=500, detail="FAL-AI API token not configured (set FAL_API_KEY)")
+        if provider == "bytez" and not BYTEZ_KEY:
+            raise HTTPException(status_code=500, detail="Bytez API token not configured (set BYTEZ_KEY)")
+        if provider == "bytez" and not BYTEZ_AVAILABLE:
+            raise HTTPException(status_code=500, detail="Bytez SDK not installed. Run: pip install bytez")
 
         # Build the final prompt with constraints
         if request.use_constraints:
@@ -91,12 +112,17 @@ async def generate_image(request: GenerateRequest):
             return await generate_hugging_face(model_config, final_prompt)
         elif provider == "fal_ai":
             return await generate_fal_ai(model_config, final_prompt)
+        elif provider == "bytez":
+            return await generate_bytez(model_config, final_prompt)
         else:
             raise HTTPException(status_code=500, detail=f"Unknown provider: {provider}")
 
     except HTTPException:
         raise
     except Exception as e:
+        print(f"[ERROR] Full traceback:")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(
             status_code=500,
             detail=f"Generation failed: {str(e)}"
@@ -207,6 +233,77 @@ async def generate_fal_ai(model_config: dict, prompt: str):
         raise HTTPException(
             status_code=500,
             detail=f"FAL-AI generation failed: {str(e)}"
+        )
+
+
+async def generate_bytez(model_config: dict, prompt: str):
+    """Generate using Bytez API"""
+    try:
+        model_id = model_config.get("model_id")
+        
+        print(f"[DEBUG] Bytez Generation Start")
+        print(f"[DEBUG] Model: {model_id}")
+        print(f"[DEBUG] Prompt: {prompt[:50]}...")
+        
+        # Initialize Bytez SDK
+        sdk = Bytez(BYTEZ_KEY)
+        model = sdk.model(model_id)
+        
+        # Run inference
+        result = model.run(prompt)
+        
+        print(f"[DEBUG] Bytez Response: {result}")
+        
+        # Handle error responses
+        if result.error:
+            raise Exception(f"Bytez API error: {result.error}")
+        
+        # Get output
+        output = result.output
+        
+        if not output:
+            raise ValueError("No output from Bytez model")
+        
+        # For image models, output should be image data or URL
+        # For text models, output is text completion
+        if isinstance(output, str) and (output.startswith("http") or output.startswith("data:")):
+            # Image URL or base64
+            if output.startswith("http"):
+                # Download the image
+                img_response = requests.get(output)
+                img_response.raise_for_status()
+                img_base64 = base64.b64encode(img_response.content).decode("utf-8")
+                image_data = f"data:image/png;base64,{img_base64}"
+            else:
+                # Already base64
+                image_data = output
+        else:
+            # For text outputs, return as JSON
+            return JSONResponse(
+                content={
+                    "output": output,
+                    "model_used": model_config.get("name"),
+                    "provider": "bytez",
+                    "type": "text"
+                }
+            )
+        
+        return JSONResponse(
+            content={
+                "image": image_data,
+                "model_used": model_config.get("name"),
+                "provider": "bytez",
+                "type": "image"
+            }
+        )
+    
+    except Exception as e:
+        print(f"[ERROR] Bytez generation failed: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Bytez generation failed: {str(e)}"
         )
 
 

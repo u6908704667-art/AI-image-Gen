@@ -31,40 +31,31 @@ MODELS = {
     },
     
     # FAL-AI Models
-    "flux-schnell": {
-        "id": "flux-schnell",
-        "name": "FLUX Schnell (FAL-AI)",
-        "provider": "fal_ai",
-        "model_id": "fal-ai/flux-schnell",
-        "description": "Ultra-fast open-source model with excellent quality",
-        "speed": "Ultra-Fast",
-        "quality": "High",
-        "features": ["text-to-image", "real-time", "open-source"],
-        "best_for": "Quick iterations, real-time generation"
-    },
+
     
-    "flux-pro": {
-        "id": "flux-pro",
-        "name": "FLUX Pro (FAL-AI)",
-        "provider": "fal_ai",
-        "model_id": "flux-pro",
-        "description": "State-of-the-art image generation with high fidelity",
-        "speed": "Medium",
-        "quality": "Exceptional",
+    # Bytez Models
+    "dreamlike-photoreal": {
+        "id": "dreamlike-photoreal",
+        "name": "Dreamlike Photoreal 2.0 (Bytez)",
+        "provider": "bytez",
+        "model_id": "dreamlike-art/dreamlike-photoreal-2.0",
+        "description": "photorealistic image generation with high quality details",
+        "speed": "Fast",
+        "quality": "Very High",
         "features": ["text-to-image", "photorealistic"],
-        "best_for": "Premium quality, photorealistic images"
+        "best_for": "Photorealistic landscapes and detailed scenes"
     },
     
-    "flux-realism": {
-        "id": "flux-realism",
-        "name": "FLUX Realism (FAL-AI)",
-        "provider": "fal_ai",
-        "model_id": "flux-realism",
-        "description": "Specialized for photorealistic and detailed generations",
-        "speed": "Medium",
-        "quality": "Exceptional",
-        "features": ["text-to-image", "photorealistic", "detail"],
-        "best_for": "Photorealism, detailed textures"
+    "camembert-fill-mask": {
+        "id": "camembert-fill-mask",
+        "name": "CamemBERT Fill Masking (Bytez)",
+        "provider": "bytez",
+        "model_id": "almanach/camembert-base",
+        "description": "Fill-mask language model for text prediction and completion",
+        "speed": "Very Fast",
+        "quality": "High",
+        "features": ["fill-mask", "text-completion", "language-model"],
+        "best_for": "Text completion, masked language tasks"
     }
 }
 
@@ -76,10 +67,11 @@ PROVIDERS = {
         "requires_token": True,
         "token_env_var": "HUGGINGFACE_API_TOKEN"
     },
-    "fal_ai": {
-        "name": "FAL-AI",
+
+    "bytez": {
+        "name": "Bytez",
         "requires_token": True,
-        "token_env_var": "FAL_API_KEY"
+        "token_env_var": "BYTEZ_KEY"
     }
 }
 
@@ -119,7 +111,8 @@ def get_model_info(model_id: str) -> dict:
 # Default models for each provider
 DEFAULT_MODELS = {
     "hugging_face": "stable-diffusion-xl",
-    "fal_ai": "z-image-turbo"
+    "fal_ai": "flux-schnell",
+    "bytez": "dreamlike-photoreal"
 }
 
 if __name__ == "__main__":

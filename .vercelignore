@@ -1,0 +1,12 @@
+# Python backend - deploy separately
+backend/
+*.py
+
+# Local development
+.venv/
+.env
+.env.local
+
+# Git
+.git
+.gitignore
