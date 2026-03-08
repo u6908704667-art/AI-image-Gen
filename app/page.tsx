@@ -14,10 +14,13 @@ export default function Home() {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [characterName, setCharacterName] = useState(''); // eslint-disable-line @typescript-eslint/no-unused-vars
   const [style, setStyle] = useState('seinen');
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [strictMode, setStrictMode] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [useConstraints, setUseConstraints] = useState(true);
   const [selectedModel, setSelectedModel] = useState('stable-diffusion-xl');
   const [availableModels, setAvailableModels] = useState<any[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [modelInfo, setModelInfo] = useState<any>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
