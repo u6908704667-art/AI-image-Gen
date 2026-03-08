@@ -8,11 +8,9 @@ export default function Home() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [generatedImage, setGeneratedImage] = useState('');
   const [loading, setLoading] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [progressMessage, setProgressMessage] = useState('');
   const [fileName, setFileName] = useState('');
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [characterName, setCharacterName] = useState(''); // eslint-disable-line @typescript-eslint/no-unused-vars
+  const [characterName, setCharacterName] = useState('');
   const [style, setStyle] = useState('seinen');
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [strictMode, setStrictMode] = useState(false);
@@ -26,41 +24,17 @@ export default function Home() {
   const [showSettings, setShowSettings] = useState(false);
   const [imageHistory, setImageHistory] = useState<string[]>([]);
   const [favorites, setFavorites] = useState<string[]>([]);
-  const [showGallery, setShowGallery] = useState(false);
   const [seed, setSeed] = useState(Math.floor(Math.random() * 1000000));
   const [steps, setSteps] = useState(20);
   const [guidance, setGuidance] = useState(7.5);
 
-  // Load gallery from localStorage on mount
-  useEffect(() => {
-    const savedGallery = localStorage.getItem('imageGallery');
-    const savedFavorites = localStorage.getItem('imageFavorites');
-    if (savedGallery) {
-      try {
-        setImageHistory(JSON.parse(savedGallery));
-      } catch (e) {
-        console.error('Failed to load gallery:', e);
-      }
-    }
-    if (savedFavorites) {
-      try {
-        setFavorites(JSON.parse(savedFavorites));
-      } catch (e) {
-        console.error('Failed to load favorites:', e);
-      }
-    }
-  }, []);
-
   useEffect(() => {
     const fetchModels = async () => {
       try {
-        const res = await fetch('http://localhost:8002/api/models');
+        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8002';
+        const res = await fetch(`${backendUrl}/api/models`);
         const data = await res.json();
         setAvailableModels(data.models || []);
-        // Set first available model as default
-        if (data.models && data.models.length > 0 && !selectedModel) {
-          setSelectedModel(data.models[0].id);
-        }
       } catch (error) {
         console.error('Failed to fetch models:', error);
       }
@@ -74,38 +48,13 @@ export default function Home() {
   }, [selectedModel, availableModels]);
 
   const addToHistory = (image: string) => {
-    const newHistory = [image, ...imageHistory.slice(0, 99)];
-    setImageHistory(newHistory);
-    localStorage.setItem('imageGallery', JSON.stringify(newHistory));
+    setImageHistory(prev => [image, ...prev.slice(0, 9)]);
   };
 
   const addToFavorites = () => {
     if (generatedImage && !favorites.includes(generatedImage)) {
-      const newFavorites = [generatedImage, ...favorites];
-      setFavorites(newFavorites);
-      localStorage.setItem('imageFavorites', JSON.stringify(newFavorites));
+      setFavorites(prev => [generatedImage, ...prev]);
     }
-  };
-
-  const removeFromGallery = (image: string) => {
-    const newHistory = imageHistory.filter(img => img !== image);
-    setImageHistory(newHistory);
-    localStorage.setItem('imageGallery', JSON.stringify(newHistory));
-  };
-
-  const removeFromFavorites = (image: string) => {
-    const newFavorites = favorites.filter(img => img !== image);
-    setFavorites(newFavorites);
-    localStorage.setItem('imageFavorites', JSON.stringify(newFavorites));
-  };
-
-  const downloadImage = (image: string, filename: string = 'generated-image.png') => {
-    const link = document.createElement('a');
-    link.href = image;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
   };
 
   const copyPrompt = () => {
@@ -123,33 +72,17 @@ export default function Home() {
 
   const handleGenerate = async () => {
     setLoading(true);
-    setProgress(0);
-    setProgressMessage('Initializing...');
-    
     let imageUrl = '';
     if (imageFile) {
-      setProgressMessage('Uploading image...');
       const formData = new FormData();
       formData.append('file', imageFile);
-      const uploadRes = await fetch('http://localhost:8002/api/upload', { method: 'POST', body: formData });
+      const uploadRes = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8002'}/api/upload`, { method: 'POST', body: formData });
       const { url } = await uploadRes.json();
       imageUrl = url;
-      setProgress(20);
     }
 
-    // Simulate progress updates
-    const progressInterval = setInterval(() => {
-      setProgress(prev => {
-        if (prev < 90) return prev + Math.random() * 30;
-        return prev;
-      });
-    }, 500);
-
     try {
-      setProgressMessage('Sending request to AI model...');
-      setProgress(30);
-      
-      const res = await fetch('http://localhost:8002/api/generate', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8002'}/api/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -164,38 +97,21 @@ export default function Home() {
         }),
       });
 
-      setProgressMessage('Processing with AI model...');
-      setProgress(60);
-
       if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.detail || `HTTP error! status: ${res.status}`);
+        throw new Error(`HTTP error! status: ${res.status}`);
       }
-
-      setProgressMessage('Finalizing image...');
-      setProgress(85);
 
       const { image, error } = await res.json();
       if (error) {
         throw new Error(error);
       }
-      
-      setProgress(100);
-      setProgressMessage('Complete!');
       setGeneratedImage(image);
       addToHistory(image);
-      
-      setTimeout(() => {
-        setProgress(0);
-        setProgressMessage('');
-      }, 1500);
     } catch (error) {
       console.error('Generation failed:', error);
       const message = error instanceof Error ? error.message : String(error);
-      setProgressMessage(`Error: ${message}`);
       alert(`Generation failed: ${message}`);
     } finally {
-      clearInterval(progressInterval);
       setLoading(false);
     }
   };
@@ -342,14 +258,9 @@ export default function Home() {
                   onChange={(e) => setSelectedModel(e.target.value)}
                   className="w-full px-4 py-3 bg-slate-900/50 border-2 border-purple-500/30 rounded-lg text-white text-sm focus:outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-400/30 backdrop-blur-sm"
                 >
-                  <option value="">
-                    {availableModels.length > 0 ? 'Select a model...' : 'Loading models...'}
-                  </option>
-                  {availableModels.map((model) => (
-                    <option key={model.id} value={model.id}>
-                      {model.name} - {model.provider}
-                    </option>
-                  ))}
+                  <option value="stable-diffusion-xl">Stable Diffusion XL</option>
+                  <option value="flux-schnell">FLUX Schnell </option>
+                  <option value="flux-pro">FLUX Pro </option>
                 </select>
               </div>
               <div className="space-y-3">
@@ -470,31 +381,6 @@ export default function Home() {
                 </>
               )}
             </motion.button>
-
-            {/* Progress Bar */}
-            <AnimatePresence>
-              {loading && (
-                <motion.div 
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="space-y-3"
-                >
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm text-purple-300 font-semibold">{progressMessage}</p>
-                    <p className="text-sm text-purple-400 font-bold">{Math.round(progress)}%</p>
-                  </div>
-                  <div className="w-full h-3 bg-slate-800 rounded-full overflow-hidden border border-purple-500/30">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${progress}%` }}
-                      transition={{ duration: 0.3, ease: 'easeOut' }}
-                      className="h-full bg-gradient-to-r from-purple-500 via-pink-500 to-cyan-500 rounded-full shadow-lg shadow-purple-500/50"
-                    />
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
           </motion.div>
 
           {/* Right Panel - Preview & History */}
@@ -564,103 +450,37 @@ export default function Home() {
             {/* History */}
             {imageHistory.length > 0 && (
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-bold text-purple-300 uppercase flex items-center gap-2">
-                    <History className="w-4 h-4" /> Gallery ({imageHistory.length})
-                  </h3>
-                  <motion.button
-                    onClick={() => setShowGallery(!showGallery)}
-                    whileHover={{ scale: 1.05 }}
-                    className="text-xs px-3 py-1 rounded-lg bg-purple-900/50 text-purple-300 hover:bg-purple-900 transition-all"
-                  >
-                    {showGallery ? 'Hide' : 'View All'}
-                  </motion.button>
+                <h3 className="text-sm font-bold text-purple-300 uppercase flex items-center gap-2">
+                  <History className="w-4 h-4" /> Recent
+                </h3>
+                <div className="grid grid-cols-3 gap-2">
+                  {imageHistory.slice(0, 6).map((img, i) => (
+                    <motion.img
+                      key={i}
+                      src={img}
+                      alt={`History ${i}`}
+                      whileHover={{ scale: 1.05 }}
+                      onClick={() => setGeneratedImage(img)}
+                      className="w-full aspect-square object-cover rounded-lg cursor-pointer border-2 border-purple-500/20 hover:border-purple-400 transition-all"
+                    />
+                  ))}
                 </div>
-                
-                {/* Gallery Grid */}
-                {showGallery ? (
-                  <div className="max-h-96 overflow-y-auto space-y-2">
-                    <div className="grid grid-cols-3 gap-2">
-                      {imageHistory.map((img, i) => (
-                        <motion.div
-                          key={i}
-                          className="relative group"
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                        >
-                          <img
-                            src={img}
-                            alt={`Gallery ${i}`}
-                            onClick={() => setGeneratedImage(img)}
-                            className="w-full aspect-square object-cover rounded-lg cursor-pointer border-2 border-purple-500/20 hover:border-purple-400 transition-all"
-                          />
-                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 rounded-lg transition-all flex items-center justify-center gap-1">
-                            <motion.button
-                              onClick={() => downloadImage(img, `generated-${i}.png`)}
-                              className="p-2 bg-purple-600 rounded hover:bg-purple-700 transition-all"
-                              title="Download"
-                            >
-                              <Download className="w-3 h-3 text-white" />
-                            </motion.button>
-                            <motion.button
-                              onClick={() => removeFromGallery(img)}
-                              className="p-2 bg-red-600 rounded hover:bg-red-700 transition-all"
-                              title="Delete"
-                            >
-                              <X className="w-3 h-3 text-white" />
-                            </motion.button>
-                          </div>
-                        </motion.div>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-3 gap-2">
-                    {imageHistory.slice(0, 6).map((img, i) => (
-                      <motion.img
-                        key={i}
-                        src={img}
-                        alt={`History ${i}`}
-                        whileHover={{ scale: 1.05 }}
-                        onClick={() => setGeneratedImage(img)}
-                        className="w-full aspect-square object-cover rounded-lg cursor-pointer border-2 border-purple-500/20 hover:border-purple-400 transition-all"
-                      />
-                    ))}
-                  </div>
-                )}
               </div>
             )}
 
             {/* Favorites */}
             {favorites.length > 0 && (
               <div className="space-y-3">
-                <h3 className="text-sm font-bold text-pink-300 uppercase flex items-center gap-2">
-                  <Heart className="w-4 h-4" /> Favorites ({favorites.length})
-                </h3>
+                <h3 className="text-sm font-bold text-pink-300 uppercase">Favorites</h3>
                 <div className="grid grid-cols-3 gap-2">
-                  {favorites.map((img, i) => (
-                    <motion.div
+                  {favorites.slice(0, 3).map((img, i) => (
+                    <motion.img
                       key={i}
-                      className="relative group"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                    >
-                      <img
-                        src={img}
-                        alt={`Favorite ${i}`}
-                        onClick={() => setGeneratedImage(img)}
-                        className="w-full aspect-square object-cover rounded-lg cursor-pointer border-2 border-pink-500/30 hover:border-pink-400 transition-all"
-                      />
-                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 rounded-lg transition-all flex items-center justify-center gap-1">
-                        <motion.button
-                          onClick={() => removeFromFavorites(img)}
-                          className="p-2 bg-red-600 rounded hover:bg-red-700 transition-all"
-                          title="Remove from favorites"
-                        >
-                          <X className="w-3 h-3 text-white" />
-                        </motion.button>
-                      </div>
-                    </motion.div>
+                      src={img}
+                      alt={`Favorite ${i}`}
+                      whileHover={{ scale: 1.05 }}
+                      className="w-full aspect-square object-cover rounded-lg border-2 border-pink-500/30 hover:border-pink-400 transition-all cursor-pointer"
+                    />
                   ))}
                 </div>
               </div>
