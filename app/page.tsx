@@ -10,7 +10,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [fileName, setFileName] = useState('');
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [characterName, setCharacterName] = useState('');
+  const [characterName, _setCharacterName] = useState('');
   const [style, setStyle] = useState('seinen');
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [strictMode, setStrictMode] = useState(false);
