@@ -9,17 +9,12 @@ export default function Home() {
   const [generatedImage, setGeneratedImage] = useState('');
   const [loading, setLoading] = useState(false);
   const [fileName, setFileName] = useState('');
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [characterName, _setCharacterName] = useState('');
+  const [characterName] = useState('');
   const [style, setStyle] = useState('seinen');
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [strictMode, setStrictMode] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [useConstraints, setUseConstraints] = useState(true);
+  const [strictMode] = useState(false);
+  const [useConstraints] = useState(true);
   const [selectedModel, setSelectedModel] = useState('stable-diffusion-xl');
   const [availableModels, setAvailableModels] = useState<any[]>([]);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [modelInfo, setModelInfo] = useState<any>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [imageHistory, setImageHistory] = useState<string[]>([]);
@@ -42,10 +37,7 @@ export default function Home() {
     fetchModels();
   }, []);
 
-  useEffect(() => {
-    const model = availableModels.find(m => m.id === selectedModel);
-    setModelInfo(model);
-  }, [selectedModel, availableModels]);
+  // Removed unused modelInfo useEffect
 
   const addToHistory = (image: string) => {
     setImageHistory(prev => [image, ...prev.slice(0, 9)]);
@@ -130,12 +122,12 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 md:px-6 py-4">
           <div className="flex items-center justify-between">
             {/* Logo */}
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               className="flex items-center gap-3"
             >
-              <motion.div 
+              <motion.div
                 className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 via-pink-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-purple-500/50"
                 animate={{ rotate: 360 }}
                 transition={{ duration: 4, repeat: Infinity, ease: 'linear' }}
@@ -188,7 +180,7 @@ export default function Home() {
           >
             <div className="max-w-7xl mx-auto px-4 py-4 space-y-2">
               <motion.button
-                onClick={() => {setShowSettings(!showSettings); setMobileMenuOpen(false);}}
+                onClick={() => { setShowSettings(!showSettings); setMobileMenuOpen(false); }}
                 className="w-full p-3 rounded-lg bg-purple-900/30 hover:bg-purple-900/50 text-purple-300 text-left flex items-center gap-2 transition-all"
               >
                 <Settings className="w-5 h-5" />
@@ -208,7 +200,7 @@ export default function Home() {
       <main className="relative max-w-7xl mx-auto px-4 md:px-6 py-8 z-10">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Panel - Controls */}
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, x: -40 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
@@ -225,7 +217,7 @@ export default function Home() {
             </div>
 
             {/* Prompt Input */}
-            <motion.div 
+            <motion.div
               className="space-y-3"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -258,9 +250,23 @@ export default function Home() {
                   onChange={(e) => setSelectedModel(e.target.value)}
                   className="w-full px-4 py-3 bg-slate-900/50 border-2 border-purple-500/30 rounded-lg text-white text-sm focus:outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-400/30 backdrop-blur-sm"
                 >
-                  <option value="stable-diffusion-xl">Stable Diffusion XL</option>
-                  <option value="flux-schnell">FLUX Schnell </option>
-                  <option value="flux-pro">FLUX Pro </option>
+                  {availableModels.length > 0 ? (
+                    availableModels.map((model) => {
+                      const modelId = typeof model === 'string' ? model : (model.id || model.name);
+                      const modelName = typeof model === 'string' ? model : (model.name || model.id);
+                      return (
+                        <option key={modelId} value={modelId}>
+                          {modelName}
+                        </option>
+                      );
+                    })
+                  ) : (
+                    <>
+                      <option value="stable-diffusion-xl">Stable Diffusion XL</option>
+                      <option value="flux-schnell">FLUX Schnell </option>
+                      <option value="flux-pro">FLUX Pro </option>
+                    </>
+                  )}
                 </select>
               </div>
               <div className="space-y-3">
@@ -289,7 +295,7 @@ export default function Home() {
                   className="bg-gradient-to-br from-purple-900/20 to-pink-900/20 border-2 border-purple-500/30 rounded-xl p-5 space-y-4"
                 >
                   <h3 className="text-lg font-bold text-purple-300">Advanced Settings</h3>
-                  
+
                   <div>
                     <label className="text-sm text-purple-300 font-semibold">Seed: {seed}</label>
                     <input
@@ -360,11 +366,10 @@ export default function Home() {
               disabled={loading}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              className={`w-full py-4 px-6 rounded-xl font-bold uppercase tracking-wider flex items-center justify-center gap-3 transition-all ${
-                loading
+              className={`w-full py-4 px-6 rounded-xl font-bold uppercase tracking-wider flex items-center justify-center gap-3 transition-all ${loading
                   ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
                   : 'bg-gradient-to-r from-purple-600 via-pink-600 to-cyan-500 text-white hover:shadow-2xl shadow-lg shadow-purple-500/30'
-              }`}
+                }`}
             >
               {loading ? (
                 <>
@@ -384,7 +389,7 @@ export default function Home() {
           </motion.div>
 
           {/* Right Panel - Preview & History */}
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, x: 40 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
@@ -393,7 +398,7 @@ export default function Home() {
             {/* Preview */}
             <div className="space-y-3">
               <h3 className="text-sm font-bold text-purple-300 uppercase">Live Preview</h3>
-              <motion.div 
+              <motion.div
                 className="aspect-square bg-gradient-to-br from-slate-800 to-slate-900 border-2 border-purple-500/30 rounded-xl overflow-hidden flex items-center justify-center relative"
                 whileHover={{ borderColor: '#a855f7' }}
               >
@@ -405,7 +410,7 @@ export default function Home() {
                     </motion.div>
                   ) : (
                     <motion.div key="placeholder" className="text-center space-y-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                      <motion.div 
+                      <motion.div
                         className="w-16 h-16 mx-auto rounded-xl bg-gradient-to-br from-purple-400/20 to-pink-400/20 flex items-center justify-center"
                         animate={{ scale: [1, 1.1, 1] }}
                         transition={{ duration: 2, repeat: Infinity }}
@@ -490,7 +495,7 @@ export default function Home() {
       </main>
 
       {/* Footer */}
-      <motion.footer 
+      <motion.footer
         className="relative border-t border-purple-500/20 mt-20 backdrop-blur-xl bg-slate-950/80"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
