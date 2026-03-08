@@ -12,7 +12,7 @@ export default function Home() {
   const [progressMessage, setProgressMessage] = useState('');
   const [fileName, setFileName] = useState('');
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [characterName, setCharacterName] = useState('');
+  const [characterName, setCharacterName] = useState(''); // eslint-disable-line @typescript-eslint/no-unused-vars
   const [style, setStyle] = useState('seinen');
   const [strictMode, setStrictMode] = useState(false);
   const [useConstraints, setUseConstraints] = useState(true);
