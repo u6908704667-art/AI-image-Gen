@@ -3,7 +3,7 @@ uvicorn==0.24.0
 python-multipart==0.0.6
 huggingface-hub==0.19.4
 python-dotenv==1.0.0
-pillow==10.1.0
+pillow>=11.0.0
 httpx==0.25.1
 bytez
 fal-client==0.13.1
