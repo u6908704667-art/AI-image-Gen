@@ -1,0 +1,5 @@
+# Railway Configuration
+# Platform automatically detects Python and installs dependencies from requirements.txt
+# No build command needed - Railway handles it!
+
+# This file is optional but ensures consistent behavior
