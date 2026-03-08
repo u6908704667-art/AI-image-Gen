@@ -11,6 +11,7 @@ export default function Home() {
   const [progress, setProgress] = useState(0);
   const [progressMessage, setProgressMessage] = useState('');
   const [fileName, setFileName] = useState('');
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [characterName, setCharacterName] = useState('');
   const [style, setStyle] = useState('seinen');
   const [strictMode, setStrictMode] = useState(false);
